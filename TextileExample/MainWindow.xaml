@@ -1,0 +1,24 @@
+﻿<Window x:Class="leMaik.TextileForWPF.Example.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:tex="clr-namespace:leMaik.TextileForWPF;assembly=leMaik.TextileForWPF"
+        Title="MainWindow"
+        Height="350"
+        Width="525"
+        TextOptions.TextFormattingMode="Display">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*" />
+            <ColumnDefinition Width="1*" />
+        </Grid.ColumnDefinitions>
+        <TextBox AcceptsReturn="True"
+                 FontFamily="Consolas"
+                 TextWrapping="Wrap"
+                 x:Name="tb" />
+        <FlowDocumentScrollViewer Grid.Column="1">
+            <tex:TextileDocument Textile="{Binding ElementName=tb, Path=Text, UpdateSourceTrigger=PropertyChanged, AsyncState=Async}"
+                                 FontFamily="Ubuntu"
+                                 FontSize="12" LinkClick="TextileDocument_LinkClick" />
+        </FlowDocumentScrollViewer>
+    </Grid>
+</Window>
