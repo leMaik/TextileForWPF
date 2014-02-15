@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -12,10 +10,10 @@ using System.Windows.Media.Imaging;
 namespace leMaik.TextileForWPF {
     public class TextileDocument : FlowDocument {
         #region Regular expressions
-        private static readonly Regex listElement = new Regex(@"^(\*+|#+) (.*)", RegexOptions.Compiled);
-        private static readonly Regex labeledLink = new Regex(@"""(.+?)(\((.+?)\))?"":(http(s)?://([\w-]+\.)+[\w-]+(/[\w-./?%&=]*)?)", RegexOptions.Compiled);
-        private static readonly Regex link = new Regex(@"http(s)?://([\w-]+\.)+[\w-]+(/[\w-./?%&=]*)?", RegexOptions.Compiled);
-        private static readonly Regex image = new Regex(@"!([<>=]+)?(http(s)?://([\w-]+\.)+[\w-]+(/[\w-./?%&=]*)?)(\((.+?)\))?!", RegexOptions.Compiled);
+        private static readonly Regex ListElement = new Regex(@"^(\*+|#+) (.*)", RegexOptions.Compiled);
+        private static readonly Regex LabeledLink = new Regex(@"""(.+?)(\((.+?)\))?"":(http(s)?://([\w-]+\.)+[\w-]+(/[\w-./?%&=]*)?)", RegexOptions.Compiled);
+        private static readonly Regex Link = new Regex(@"http(s)?://([\w-]+\.)+[\w-]+(/[\w-./?%&=]*)?", RegexOptions.Compiled);
+        private static readonly Regex Image = new Regex(@"!([<>=]+)?(http(s)?://([\w-]+\.)+[\w-]+(/[\w-./?%&=]*)?)(\((.+?)\))?!", RegexOptions.Compiled);
         #endregion
 
         public String Textile {
@@ -29,7 +27,7 @@ namespace leMaik.TextileForWPF {
 
         private static void OnTextilePropertyChanged(DependencyObject source,
         DependencyPropertyChangedEventArgs e) {
-            TextileDocument td = (TextileDocument)source;
+            var td = (TextileDocument)source;
             td.ReparseTextile();
         }
 
@@ -45,28 +43,33 @@ namespace leMaik.TextileForWPF {
         /// Parst den gesamten Textile-Inhalt dieses Dokuments neu.
         /// </summary>
         private void ReparseTextile() {
+            if (!String.IsNullOrWhiteSpace(Textile)) {
 #if DEBUG
             DateTime start = DateTime.Now;
 #endif
-            Section blocks = ParseTextile(Textile);
+                var blocks = ParseTextile(Textile);
 #if DEBUG
             DateTime stop = DateTime.Now;
             System.Diagnostics.Debug.WriteLine("[TextileForWPF] Parsing took {0} ms (length: {1} characters)", (stop - start).TotalMilliseconds, Textile.Length);
 #endif
-            this.Blocks.Clear();
-            this.Blocks.Add(blocks);
+                Blocks.Clear();
+                Blocks.Add(blocks);
+            }
+            else {
+                Blocks.Clear();
+            }
         }
 
         private Section ParseTextile(String rawTextile) {
-            Section r = new Section();
-            BlockCollection result = r.Blocks;
+            var r = new Section();
+            var result = r.Blocks;
 
-            StringBuilder currentParagraph = new StringBuilder();
+            var currentParagraph = new StringBuilder();
             List currentList = null;
-            bool lastLineWasBlank = true;
+            var lastLineWasBlank = true;
 
-            String[] lines = rawTextile.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
-            foreach (String line in lines) {
+            var lines = rawTextile.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+            foreach (var line in lines) {
                 if (line.Trim().Length == 0) {
                     if ((result.LastBlock is Paragraph && ((Paragraph)result.LastBlock).Inlines.Count == 0))
                         result.Remove(result.LastBlock);
@@ -75,7 +78,7 @@ namespace leMaik.TextileForWPF {
                         currentList = null;
                     }
                     else if (currentParagraph.Length > 0) {
-                        Paragraph p = new Paragraph();
+                        var p = new Paragraph();
                         p.Inlines.AddRange(ParseParagraph(currentParagraph.ToString(), new TextileFormatCollection()));
                         result.Add(p);
                         currentParagraph.Clear();
@@ -83,19 +86,19 @@ namespace leMaik.TextileForWPF {
                     lastLineWasBlank = true;
                 }
                 else {
-                    Match listItemMatch = listElement.Match(line);
+                    var listItemMatch = ListElement.Match(line);
                     if (listItemMatch.Success) {
                         if (currentParagraph.Length > 0) {
-                            Paragraph p = new Paragraph();
+                            var p = new Paragraph();
                             p.Inlines.AddRange(ParseParagraph(currentParagraph.ToString(), new TextileFormatCollection()));
                             result.Add(p);
                             currentParagraph.Clear();
                         }
 
                         if (currentList == null) {
-                            currentList = new List() { MarkerStyle = listItemMatch.Groups[0].Value[0] == '*' ? TextMarkerStyle.Disc : TextMarkerStyle.Decimal };
+                            currentList = new List { MarkerStyle = listItemMatch.Groups[0].Value[0] == '*' ? TextMarkerStyle.Disc : TextMarkerStyle.Decimal };
                         }
-                        Paragraph content = new Paragraph() { TextAlignment = TextAlignment.Left };
+                        var content = new Paragraph { TextAlignment = TextAlignment.Left };
                         content.Inlines.AddRange(FormatTextileTo(listItemMatch.Groups[2].Value));
                         currentList.AddAtLayer(content, listItemMatch.Groups[1].Value.Length, listItemMatch.Groups[0].Value[0] == '*' ? TextMarkerStyle.Disc : TextMarkerStyle.Decimal);
 
@@ -126,7 +129,7 @@ namespace leMaik.TextileForWPF {
                 result.Add(currentList);
             }
             else {
-                Paragraph p = new Paragraph();
+                var p = new Paragraph();
                 p.Inlines.AddRange(ParseParagraph(currentParagraph.ToString(), new TextileFormatCollection()));
                 result.Add(p);
                 currentParagraph.Clear();
@@ -135,15 +138,14 @@ namespace leMaik.TextileForWPF {
             return r;
         }
 
-        private List<Inline> ParseParagraph(String textileLine, TextileFormatCollection currentFormat, bool ignoreHyperlinks = false) {
-            List<Inline> result = new List<Inline>();
+        private IEnumerable<Inline> ParseParagraph(String textileLine, TextileFormatCollection currentFormat, bool ignoreHyperlinks = false) {
+            var result = new List<Inline>();
 
-            int i = 0;
-            int start = 0;
-            int end = 0;
-            bool found;
+            var i = 0;
+            var start = 0;
+            var end = 0;
             while (i < textileLine.Length) {
-                found = false;
+                var found = false;
                 if (i < textileLine.Length - 1) {
                     if (textileLine[i] == '*' && textileLine[i + 1] == '*') {
                         end = i - 1;
@@ -178,7 +180,7 @@ namespace leMaik.TextileForWPF {
                         found = true;
                     }
                     else if (!ignoreHyperlinks && textileLine[i] == '"') {
-                        Match m = labeledLink.Match(textileLine, i);
+                        var m = LabeledLink.Match(textileLine, i);
                         if (m.Success && m.Index == i) {
                             end = i - 1;
                             result.Add(MakeRun(textileLine.Substring(start, end - start + 1), currentFormat));
@@ -188,7 +190,7 @@ namespace leMaik.TextileForWPF {
                         }
                     }
                     else if (!ignoreHyperlinks && textileLine[i] == 'h') {
-                        Match m = link.Match(textileLine, i);
+                        var m = Link.Match(textileLine, i);
                         if (m.Success && m.Index == i) {
                             end = i - 1;
                             result.Add(MakeRun(textileLine.Substring(start, end - start + 1), currentFormat));
@@ -198,17 +200,14 @@ namespace leMaik.TextileForWPF {
                         }
                     }
                     else if (textileLine[i] == '!') {
-                        Match m = image.Match(textileLine, i);
+                        var m = Image.Match(textileLine, i);
                         if (m.Success && m.Index == i) {
                             end = i - 1;
                             result.Add(MakeRun(textileLine.Substring(start, end - start + 1), currentFormat));
-                            Image img = new Image() { Source = new BitmapImage(new Uri(m.Groups[2].Value, UriKind.Absolute)) };
+                            var img = new Image { Source = new BitmapImage(new Uri(m.Groups[2].Value, UriKind.Absolute)) };
                             if (m.Groups[7].Length > 0)
                                 img.ToolTip = m.Groups[7].Value;
-                            if (m.Groups[1].Value == "<>")
-                                img.Stretch = System.Windows.Media.Stretch.Uniform;
-                            else
-                                img.Stretch = System.Windows.Media.Stretch.None;
+                            img.Stretch = m.Groups[1].Value == "<>" ? System.Windows.Media.Stretch.Uniform : System.Windows.Media.Stretch.None;
                             result.Add(new InlineUIContainer(img));
                             i += m.Value.Length;
                             found = true;
@@ -217,21 +216,23 @@ namespace leMaik.TextileForWPF {
                 }
 
                 if (!found) {
-                    if (textileLine[i] == '~') {
-                        end = i - 1;
-                        if (start <= end)
-                            result.Add(MakeRun(textileLine.Substring(start, end - start + 1), currentFormat));
-                        i++;
-                        currentFormat.Flip(TextileFormat.Subscript);
-                        found = true;
-                    }
-                    else if (textileLine[i] == '^') {
-                        end = i - 1;
-                        if (start <= end)
-                            result.Add(MakeRun(textileLine.Substring(start, end - start + 1), currentFormat));
-                        i++;
-                        currentFormat.Flip(TextileFormat.Superscript);
-                        found = true;
+                    switch (textileLine[i]) {
+                        case '~':
+                            end = i - 1;
+                            if (start <= end)
+                                result.Add(MakeRun(textileLine.Substring(start, end - start + 1), currentFormat));
+                            i++;
+                            currentFormat.Flip(TextileFormat.Subscript);
+                            found = true;
+                            break;
+                        case '^':
+                            end = i - 1;
+                            if (start <= end)
+                                result.Add(MakeRun(textileLine.Substring(start, end - start + 1), currentFormat));
+                            i++;
+                            currentFormat.Flip(TextileFormat.Superscript);
+                            found = true;
+                            break;
                     }
                 }
 
@@ -251,14 +252,14 @@ namespace leMaik.TextileForWPF {
             return result;
         }
 
-        private Run MakeRun(String text, TextileFormatCollection format) {
-            Run result = new Run(text);
+        private static Run MakeRun(String text, TextileFormatCollection format) {
+            var result = new Run(text);
             format.ApplyOn(result);
             return result;
         }
 
         private Hyperlink MakeHyperlink(String text, String url, String tooltip, TextileFormatCollection format) {
-            Hyperlink result = new Hyperlink();
+            var result = new Hyperlink();
 
             result.Inlines.AddRange(FormatTextileTo(text, true));
 
@@ -267,13 +268,11 @@ namespace leMaik.TextileForWPF {
             if (!String.IsNullOrWhiteSpace(tooltip))
                 result.ToolTip = tooltip;
 
-            result.Click += (s, e) => {
-                RaiseEvent(new HyperlinkClickedEventArgs(LinkClickEvent, url));
-            };
+            result.Click += (s, e) => RaiseEvent(new HyperlinkClickedEventArgs(LinkClickEvent, url));
             return result;
         }
 
-        private List<Inline> FormatTextileTo(String textile, bool ignoreHyperlinks = false) {
+        private IEnumerable<Inline> FormatTextileTo(String textile, bool ignoreHyperlinks = false) {
             return ParseParagraph(textile, new TextileFormatCollection(), ignoreHyperlinks);
         }
     }

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Documents;
 
@@ -15,7 +12,9 @@ namespace leMaik.TextileForWPF {
         Subscript
     }
 
-    class TextileFormatCollection : HashSet<TextileFormat> {
+    class TextileFormatCollection {
+        private readonly HashSet<TextileFormat> _formats = new HashSet<TextileFormat>();
+
         public void ApplyOn(Inline result) {
             if (Contains(TextileFormat.Bold))
                 result.FontWeight = FontWeight.FromOpenTypeWeight(700);
@@ -34,8 +33,8 @@ namespace leMaik.TextileForWPF {
                 result.Typography.Variants = FontVariants.Superscript;
         }
 
-        new public void Add(TextileFormat t) {
-            base.Add(t);
+        public void Add(TextileFormat t) {
+            _formats.Add(t);
 
             //Gegensätzliche Formatierungen ggf. entfernen
             switch (t) {
@@ -46,6 +45,14 @@ namespace leMaik.TextileForWPF {
                     Remove(TextileFormat.Subscript);
                     break;
             }
+        }
+
+        public void Remove(TextileFormat t) {
+            _formats.Remove(t);
+        }
+
+        public bool Contains(TextileFormat t) {
+            return _formats.Contains(t);
         }
 
         /// <summary>
@@ -63,9 +70,9 @@ namespace leMaik.TextileForWPF {
         /// Kopiert diese TextileFormatCollection und gibt die neue Instanz zurück.
         /// </summary>
         /// <returns>Neue Instanz mit den gleichen Formatierungen</returns>
-        internal TextileFormatCollection Clone() {
-            TextileFormatCollection result = new TextileFormatCollection();
-            foreach (TextileFormat f in this)
+        public TextileFormatCollection Clone() {
+            var result = new TextileFormatCollection();
+            foreach (var f in _formats)
                 result.Add(f);
             return result;
         }
