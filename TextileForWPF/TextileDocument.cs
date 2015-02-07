@@ -68,7 +68,7 @@ namespace leMaik.TextileForWPF {
             List currentList = null;
             var lastLineWasBlank = true;
 
-            var lines = rawTextile.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+            var lines = rawTextile.Split(new[] { Environment.NewLine, "\n" }, StringSplitOptions.None);
             foreach (var line in lines) {
                 if (line.Trim().Length == 0) {
                     if ((result.LastBlock is Paragraph && ((Paragraph)result.LastBlock).Inlines.Count == 0))
